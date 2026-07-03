@@ -6,7 +6,7 @@ The application facilitates zone-based logistics routing, volumetric pricing, ma
 
 ---
 
-## 🛠️ Project Structure
+##  Project Structure
 
 ```text
 d:/Last_Mile_Delivery/
@@ -37,7 +37,7 @@ d:/Last_Mile_Delivery/
 
 ---
 
-## ⚙️ Local Installation & Running Guide
+##  Local Installation & Running Guide
 
 ### Prerequisites
 1. **Node.js** (v18+ recommended)
@@ -86,7 +86,7 @@ d:/Last_Mile_Delivery/
 
 ---
 
-## 🔑 Default Seed Accounts
+##  Default Seed Accounts
 
 The database seed command generates the following default credentials for testing all roles:
 
@@ -122,7 +122,7 @@ The pricing engine runs in `server/services/pricingService.js` and implements th
 
 ---
 
-## 🛰️ Geodesic Auto-Assignment Logic
+##  Geodesic Auto-Assignment Logic
 
 When auto-assignment is triggered (`server/services/assignmentService.js`):
 1. The system queries all users with `role: 'delivery_agent'` and `isAvailable: true`.
@@ -133,7 +133,7 @@ When auto-assignment is triggered (`server/services/assignmentService.js`):
 
 ---
 
-## 📦 API Documentation
+##  API Documentation
 
 All request bodies and responses are standard JSON format. Access to protected routes requires a `Bearer <token>` HTTP Header.
 
