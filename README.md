@@ -112,7 +112,7 @@ JWT_SECRET=your_secret_key
 ## Client (`client/.env`)
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5000
 ```
 
 ---
