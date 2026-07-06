@@ -1,164 +1,358 @@
-# Last-Mile Delivery Tracker (Full-Stack Management Platform)
+🚚 Last-Mile Delivery Tracker
 
-A complete, production-ready full-stack delivery management and tracking platform built with the MERN stack (Node.js, Express, MongoDB, and React with Vite + Tailwind CSS). 
-
-The application facilitates zone-based logistics routing, volumetric pricing, manual/automated geodesic agent assignments, tracking, SMS/Email notification alerts, and customer rescheduling flows.
+A full-stack **Last-Mile Delivery Tracking System** built using the **MERN Stack** (MongoDB, Express.js, React, Node.js) and containerized with **Docker Compose**. The application provides role-based access for **Admins**, **Delivery Agents**, and **Customers** to efficiently manage and track delivery operations.
 
 ---
 
-##  Project Structure
+## 📌 Features
+
+### 👤 Customer
+
+* Register and log in securely
+* Create new delivery orders
+* View order history
+* Track order details and delivery status
+
+### 🚴 Delivery Agent
+
+* View assigned delivery orders
+* Update order delivery status
+
+### 🛠️ Admin
+
+* Dashboard overview
+* Manage delivery agents
+* Manage customer orders
+* Manage delivery zones
+* Manage rate cards
+* Automatic order assignment
+
+---
+
+## 🏗️ Tech Stack
+
+### Frontend
+
+* React.js
+* Vite
+* React Router
+* Tailwind CSS
+* Axios
+
+### Backend
+
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JWT Authentication
+
+### DevOps
+
+* Docker
+* Docker Compose
+
+---
+
+## 📂 Project Structure
 
 ```text
-d:/Last_Mile_Delivery/
-├── client/                      # Frontend Client (React.js + Vite + Tailwind CSS v3)
+Last-Mile-Delivery-Tracker/
+├── client/
 │   ├── src/
-│   │   ├── components/          # Reusable UI widgets
-│   │   ├── context/             # React Session Auth State (AuthContext)
-│   │   ├── layouts/             # Core UI Shells (DashboardLayout, GuestLayout)
-│   │   ├── pages/               # Views (Customer, Admin, and Agent workflows)
-│   │   ├── routes/              # Client guards (ProtectedRoute)
-│   │   ├── services/            # Axios API client (api.js with JWT headers)
-│   │   ├── index.css            # Tailwind styles + Custom Glassmorphism UI tokens
-│   │   └── App.jsx              # Client navigation routes
+│   ├── Dockerfile
 │   └── package.json
 │
-├── server/                      # Backend API Server (Node.js + Express.js + Mongoose)
-│   ├── config/                  # DB Connection Manager (db.js)
-│   ├── controllers/             # Request handlers (Auth, Orders, Zones, Rates, Agents)
-│   ├── middleware/              # JWT verification, Role authorization, Validation, Error caught
-│   ├── models/                  # Mongoose MongoDB schemas
-│   ├── routes/                  # Express Router routes
-│   ├── services/                # Business services (Pricing engine, Agent assignment, Notifications)
-│   └── utils/                   # Seeding script, geodesic calculators
+├── server/
+│   ├── config/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   ├── utils/
+│   ├── tests/
+│   ├── Dockerfile
+│   └── package.json
 │
-├── .env.example                 # Environment configuration template
-└── README.md                    # System documentation
+├── compose.yml
+└── README.md
 ```
 
 ---
 
-##  Local Installation & Running Guide
+# ⚙️ Prerequisites
 
-### Prerequisites
-1. **Node.js** (v18+ recommended)
-2. **MongoDB** (Local Community Edition or MongoDB Atlas instance URI)
+Install the following before running the project:
 
-### Backend Setup
-1. Open a terminal and navigate to the backend server directory:
-   ```bash
-   cd server
-   ```
-2. Install node package dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up environment configurations:
-   - Create a copy of `.env.example` named `.env`
-   - Fill in your local/Atlas `MONGO_URI` and define a custom `JWT_SECRET` key:
-     ```env
-     PORT=5000
-     MONGO_URI=mongodb://localhost:27017/last_mile_delivery
-     JWT_SECRET=your_secret_signing_key_here
-     ```
-4. Run the database seed script to populate default zones, pricing rate cards, and role accounts (admin, customer, riders):
-   ```bash
-   npm run seed
-   ```
-5. Launch the backend API server (runs in development watcher mode via Nodemon):
-   ```bash
-   npm run dev
-   ```
+* Docker
+* Docker Compose (or Docker Desktop)
 
-### Frontend Client Setup
-1. Open a separate terminal and navigate to the client folder:
-   ```bash
-   cd client
-   ```
-2. Install node dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the Vite development server (port 3000):
-   ```bash
-   npm run dev
-   ```
-4. Open your web browser and navigate to `http://localhost:3000`
+Verify installation:
+
+```bash
+docker --version
+docker compose version
+```
 
 ---
 
-##  Default Seed Accounts
+# 🔐 Environment Variables
 
-The database seed command generates the following default credentials for testing all roles:
+## Server (`server/.env`)
 
-| Role | Username / Email | Password | Details |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@lastmile.com` | `Password123` | Direct access to zones, rate cards, and agent manual overrides. |
-| **Customer** | `customer@lastmile.com` | `Password123` | Direct access to book orders and reschedule failed deliveries. |
-| **Agent 1** | `agent1@lastmile.com` | `Password123` | North Zone delivery agent. |
-| **Agent 2** | `agent2@lastmile.com` | `Password123` | West Zone delivery agent. |
-| **Agent 3** | `agent3@lastmile.com` | `Password123` | South Zone delivery agent. |
+```env
+PORT=5000
 
----
+MONGO_URI=mongodb://mongo:27017/lastmile
 
-## Rate Calculation Logic
+JWT_SECRET=your_secret_key
+```
 
-The pricing engine runs in `server/services/pricingService.js` and implements the following logic:
+## Client (`client/.env`)
 
-1. **Zone Detection**:
-   The system queries all zones in MongoDB to match the `pickupPincode` and `dropPincode` against mapped zone pincode lists. If zones are detected, they are assigned to the order; otherwise, a routing error is returned.
-2. **Volumetric Weight Calculation**:
-   Calculated using standard logistics volumetric measurements:
-   $$\text{Volumetric Weight (kg)} = \frac{\text{Length (cm)} \times \text{Breadth (cm)} \times \text{Height (cm)}}{5000}$$
-3. **Billable Weight**:
-   The billable weight is set as the higher value between the package's actual weight and its volumetric weight:
-   $$\text{Billable Weight} = \max(\text{Actual Weight}, \text{Volumetric Weight})$$
-4. **Intra-Zone vs. Inter-Zone Routing**:
-   If the pickup zone ID and drop zone ID are identical, the route type is classified as `intra`, else it is classified as `inter`.
-5. **Rate Card Selection**:
-   The system fetches the `RateCard` matching the trip type (`intra` / `inter`) and order client type (`B2B` / `B2C`).
-6. **Total Delivery Charge**:
-   $$\text{Base Cost} = \text{Billable Weight} \times \text{RateCard.pricePerKg}$$
-   $$\text{Total Charge} = \text{Base Cost} + \text{COD Surcharge (if COD Selected)}$$
+```env
+VITE_API_URL=http://localhost:5000/api
+```
 
 ---
 
-##  Geodesic Auto-Assignment Logic
+# 🚀 Running the Project
 
-When auto-assignment is triggered (`server/services/assignmentService.js`):
-1. The system queries all users with `role: 'delivery_agent'` and `isAvailable: true`.
-2. Geodesic distance (Haversine formula) is calculated between the pickup pincode coordinates and each agent's reported `currentLocation` (lat/lng):
-   $$d = 2R \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta \text{lat}}{2}\right) + \cos(\text{lat}_1)\cos(\text{lat}_2)\sin^2\left(\frac{\Delta \text{lng}}{2}\right)}\right)$$
-3. If GPS is unavailable on agents (coordinates are `0,0`), the service falls back to **Zone-based matching** (agents registered with their home `zone` equal to the pickup zone).
-4. If zone matching yields multiple agents, it performs **Load-based balancing**, selecting the agent with the lowest number of active/pending deliveries.
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd Last-Mile-Delivery-Tracker
+```
+
+Build and start all services:
+
+```bash
+docker compose up --build
+```
+
+Run in detached mode:
+
+```bash
+docker compose up -d --build
+```
 
 ---
 
-##  API Documentation
+# 📦 Docker Services
 
-All request bodies and responses are standard JSON format. Access to protected routes requires a `Bearer <token>` HTTP Header.
+| Service | Port  | Description      |
+| ------- | ----- | ---------------- |
+| MongoDB | 27017 | Database         |
+| Server  | 5000  | Express REST API |
+| Client  | 5173  | React Frontend   |
 
-### Auth Endpoints
-- `POST /api/auth/register` - Create user. Request body: `{ name, email, password, phone, role, zone }`
-- `POST /api/auth/login` - Verify user. Request body: `{ email, password }`
-- `GET /api/auth/me` - Load logged in profile.
+---
 
-### Zones (Admin only)
-- `GET /api/zones` - Get active zones.
-- `POST /api/zones` - Create zone. Request: `{ zoneName, city, pincodes }`
-- `PUT /api/zones/:id` - Update zone pincodes list.
-- `DELETE /api/zones/:id` - Delete zone.
+# 🌐 Application URLs
 
-### Rate Cards (Admin only)
-- `GET /api/rate-cards` - Get rate cards list.
-- `POST /api/rate-cards` - Create rate card. Request: `{ zoneType, orderType, pricePerKg, codCharge }`
-- `PUT /api/rate-cards/:id` - Update pricing metrics.
-- `DELETE /api/rate-cards/:id` - Delete rate configuration.
+| Service     | URL                       |
+| ----------- | ------------------------- |
+| Frontend    | http://localhost:5173     |
+| Backend API | http://localhost:5000     |
+| MongoDB     | mongodb://localhost:27017 |
 
-### Orders
-- `POST /api/orders/calculate` - Pricing engine preview. Request: `{ pickupPincode, dropPincode, length, breadth, height, actualWeight, orderType, paymentType }`
-- `POST /api/orders` - Confirm and book order. Request body: Same as calculate preview.
-- `GET /api/orders` - Retrieve list of orders (Filtered automatically based on user roles).
-- `GET /api/orders/:id` - Get details and immutable tracking history.
-- `PUT /api/orders/:id/status` - Transition status. Request: `{ status, remarks }`
-- `PUT /api/orders/:id/assign-agent` - (Admin only) Assign agent. Request: `{ agentId }` or `{ autoAssign: true }`
-- `PUT /api/orders/:id/reschedule` - Reschedule failed attempt. Request: `{ rescheduleDate }`
+---
+
+# 📋 Verify Running Containers
+
+```bash
+docker ps
+```
+
+Expected output:
+
+```
+client
+server
+mongo
+```
+
+---
+
+# 🛠️ Useful Docker Commands
+
+### Build and Start
+
+```bash
+docker compose up --build
+```
+
+### Run in Background
+
+```bash
+docker compose up -d
+```
+
+### View Logs
+
+```bash
+docker compose logs
+```
+
+### View Logs for Backend
+
+```bash
+docker compose logs -f server
+```
+
+### View Logs for Frontend
+
+```bash
+docker compose logs -f client
+```
+
+### Stop Containers
+
+```bash
+docker compose down
+```
+
+### Remove Containers and Volumes
+
+```bash
+docker compose down -v
+```
+
+### Restart Services
+
+```bash
+docker compose restart
+```
+
+---
+
+# 🌱 Seed Sample Data
+
+Run the seed script inside the backend container:
+
+```bash
+docker exec -it server node utils/seed.js
+```
+
+---
+
+# 📡 REST API Endpoints
+
+## Authentication
+
+| Method | Endpoint             |
+| ------ | -------------------- |
+| POST   | `/api/auth/register` |
+| POST   | `/api/auth/login`    |
+
+## Orders
+
+| Method | Endpoint          |
+| ------ | ----------------- |
+| POST   | `/api/orders`     |
+| GET    | `/api/orders`     |
+| GET    | `/api/orders/:id` |
+
+## Admin
+
+* Manage Agents
+* Manage Orders
+* Manage Delivery Zones
+* Manage Rate Cards
+
+---
+
+# 🧪 Running Tests
+
+Backend integration tests:
+
+```bash
+docker exec -it server npm test
+```
+
+---
+
+# 🐞 Troubleshooting
+
+### MongoDB Connection Failed
+
+Verify your backend `.env` contains:
+
+```env
+MONGO_URI=mongodb://mongo:27017/lastmile
+```
+
+---
+
+### Backend Not Starting
+
+Check server logs:
+
+```bash
+docker compose logs server
+```
+
+---
+
+### Frontend Cannot Reach Backend
+
+Ensure:
+
+* Backend container is running
+* `VITE_API_URL=http://localhost:5000/api`
+* Port **5000** is available
+
+---
+
+### Port Already in Use
+
+Stop conflicting services or modify the exposed ports in `compose.yml`.
+
+---
+
+# 📸 Screenshots
+
+You can add screenshots here.
+
+```
+docs/
+├── login.png
+├── dashboard.png
+├── orders.png
+└── admin.png
+```
+
+Example:
+
+```markdown
+## Login
+
+![Login](docs/login.png)
+```
+
+---
+
+# 🔮 Future Enhancements
+
+* Live GPS tracking
+* Real-time notifications
+* Email/SMS updates
+* Payment integration
+* Analytics dashboard
+* Delivery route optimization
+* Admin reports
+* Mobile application
+
+---
+
+# 👨‍💻 Author
+
+Developed as a MERN Stack + Docker practice project demonstrating a complete Last-Mile Delivery Tracking System.
+
+---
+
+# 📄 License
+
+This project is intended for educational and learning purposes.

@@ -24,14 +24,14 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Environment and local config files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.development
-.env.test
-.env.production
+# .env
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
+# .env.development
+# .env.test
+# .env.production
 
 # IDEs, Editors and Tools
 .vscode/
