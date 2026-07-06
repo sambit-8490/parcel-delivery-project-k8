@@ -1,0 +1,152 @@
+# Last-Mile Delivery Tracker — Kubernetes Deployment Guide
+
+This guide covers deploying the Last-Mile Delivery Tracker to a local Kubernetes cluster (tested with **minikube**). It assumes you already have Docker images buildable from `client/` and `server/` (see the main `README.md` for the Docker Compose setup).
+
+## Prerequisites
+
+- [minikube](https://minikube.sigs.k8s.io/) (or another local Kubernetes cluster)
+- `kubectl` configured against your cluster
+- Docker (for building images)
+
+## Architecture
+
+The cluster runs three components, defined in `k8s.yaml`:
+
+| Component | Kind | Exposed via | Notes |
+|-----------|------|-------------|-------|
+| `mongo` | Deployment + Service (ClusterIP) | Internal only, port `27017` | Persists to `mongo-pvc` |
+| `server` | Deployment + Service (NodePort) | `NodePort 30001` → container port `5000` | Reads config from `server-config` ConfigMap + `server-secret` Secret |
+| `client` | Deployment + Service (NodePort) | `NodePort 30003` → container port `5173` | Static Vite build served via `serve` |
+
+## ⚠️ Critical gotcha: `VITE_API_URL` is a build-time value, not a runtime one
+
+This is the single most important thing to understand about this deployment.
+
+The client is built with Vite (`vite build`) into static files, then served with the `serve` package. Vite does **not** read `VITE_API_URL` at container startup — it substitutes it directly into the compiled JavaScript **at build time**, during `RUN npm run build` in the Dockerfile. Once the image is built:
+
+- Setting `VITE_API_URL` in the pod's `env:` block in `k8s.yaml` has **no effect** — nothing in the running container reads it.
+- The only way to change the API URL the frontend calls is to **rebuild the image** with the correct value passed as a Docker build argument.
+
+This is different from running `vite`/`vite dev` as a live dev server, where env vars *are* read live on each request — if you've seen a different project "just work" with runtime env changes, it's almost certainly running the dev server rather than a production build.
+
+### Correct client Dockerfile
+
+`client/kube-Dockerfile` (or your equivalent) must declare the build arg **before** the build step:
+
+```dockerfile
+# Build stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=builder /app/dist ./dist
+EXPOSE 5173
+CMD ["serve", "-s", "dist", "-l", "5173"]
+```
+
+### Also note: the app code doesn't include `/api` in `VITE_API_URL`
+
+The frontend's Axios client sets `baseURL` to `VITE_API_URL` directly, and individual API calls already include the `/api` prefix (e.g. `api.post('/api/auth/register', ...)`). So:
+
+```
+VITE_API_URL=http://192.168.49.2:30001        ✅ correct
+VITE_API_URL=http://192.168.49.2:30001/api    ❌ produces /api/api/... and 404s
+```
+
+## Deployment steps
+
+### 1. Get your minikube IP
+
+```bash
+minikube ip
+# e.g. 192.168.49.2
+```
+
+### 2. Build the server image
+
+```bash
+docker build -t delivery:server ./server
+minikube image load delivery:server
+```
+
+### 3. Build the client image with the correct API URL baked in
+
+Replace `<MINIKUBE_IP>` with the output from step 1, and match the server's NodePort (`30001` in `k8s.yaml`):
+
+```bash
+docker build -f client/kube-Dockerfile \
+  --build-arg VITE_API_URL=http://<MINIKUBE_IP>:30001 \
+  -t delivery:client ./client
+
+minikube image load delivery:client
+```
+
+> If your minikube IP ever changes (e.g. after `minikube delete` + `minikube start`), you must **rebuild the client image** with the new IP — restarting the pod is not sufficient.
+
+### 4. Apply the manifests
+
+```bash
+kubectl apply -f k8s.yaml
+```
+
+This creates the ConfigMap, Secret, PVCs, Deployments, and Services in one shot.
+
+### 5. Verify everything is running
+
+```bash
+kubectl get all
+```
+
+You should see `client`, `mongo`, and `server` pods all in `Running` state.
+
+### 6. Access the app
+
+```
+http://<MINIKUBE_IP>:30003
+```
+
+The backend API is separately reachable at `http://<MINIKUBE_IP>:30001/api` if you want to test it directly (e.g. via `curl`).
+
+## Verifying a working deployment
+
+Bypass the browser entirely to confirm the backend works, independent of any frontend/CORS issues:
+
+```bash
+curl -i -X POST http://<MINIKUBE_IP>:30001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test User","email":"test@example.com","password":"123456","phone":"1234567890","role":"customer"}'
+```
+
+A `201 Created` response with a `token` and `user` object confirms the server, database, and CORS config are all healthy.
+
+Then, in the browser (ideally an **incognito window** to avoid any stale cached JS bundle):
+
+1. Open DevTools → Network tab
+2. Load the app and submit the registration form
+3. Confirm the request's **Request URL** matches your server's NodePort address, not `localhost`
+4. Confirm the response status is `201`
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| `net::ERR_CONNECTION_REFUSED` on register/login, request URL shows `localhost:5000` | Client image was built without the correct `VITE_API_URL` build arg — rebuild per step 3 |
+| Server logs show zero output when submitting a form | Request never reached the server — check the browser Network tab's actual request URL and Console tab for CORS errors |
+| `404` on `/api/api/auth/register` | `VITE_API_URL` incorrectly includes a trailing `/api` — remove it, since the code already adds it |
+| CORS error in Console tab | Check `server.js`'s `cors()` config; `origin: '*'` combined with `credentials: true` is invalid per spec — use `origin: true` instead if credentials are needed |
+| Pods `CrashLoopBackOff` | Check `kubectl logs <pod>` and `kubectl describe pod <pod>` for details (e.g. Mongo connection string mismatch, missing Secret) |
+
+## Known simplifications in this setup
+
+- Uses `NodePort` services rather than an `Ingress` — fine for local development, but not how you'd expose this in a real cluster.
+- The client's `VITE_API_URL` hardcodes a specific host:port at build time. A more portable long-term approach is to set `VITE_API_URL=/api` and route `/api/*` through an Ingress or reverse proxy to the server Service, so the frontend never needs to know the backend's actual address.
+- `JWT_SECRET` in `k8s.yaml`'s Secret is base64-encoded plaintext for local dev only — replace with a securely generated secret before using this manifest anywhere beyond your local machine.
