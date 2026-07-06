@@ -235,6 +235,19 @@ Run the seed script inside the backend container:
 ```bash
 docker exec -it server node utils/seed.js
 ```
+```
+Default Seed Accounts
+The database seed command generates the following default credentials for testing all roles:
+
+Role	Username / Email	Password	Details
+Admin	admin@lastmile.com	Password123	Direct access to zones, rate cards, and agent manual overrides.
+Customer	customer@lastmile.com	Password123	Direct access to book orders and reschedule failed deliveries.
+Agent 1	agent1@lastmile.com	Password123	North Zone delivery agent.
+Agent 2	agent2@lastmile.com	Password123	West Zone delivery agent.
+Agent 3	agent3@lastmile.com	Password123	South Zone delivery agent.
+
+```
+
 
 ---
 
@@ -301,7 +314,7 @@ docker compose logs server
 Ensure:
 
 * Backend container is running
-* `VITE_API_URL=http://localhost:5000/api`
+* `VITE_API_URL=http://localhost:5000`
 * Port **5000** is available
 
 ---
