@@ -241,9 +241,13 @@ The database seed command generates the following default credentials for testin
 
 Role	Username / Email	Password	Details
 Admin	admin@lastmile.com	Password123	Direct access to zones, rate cards, and agent manual overrides.
+
 Customer	customer@lastmile.com	Password123	Direct access to book orders and reschedule failed deliveries.
+
 Agent 1	agent1@lastmile.com	Password123	North Zone delivery agent.
+
 Agent 2	agent2@lastmile.com	Password123	West Zone delivery agent.
+
 Agent 3	agent3@lastmile.com	Password123	South Zone delivery agent.
 
 ```
